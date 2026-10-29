@@ -127,6 +127,21 @@ final class LearningTests: XCTestCase {
         let mode = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
         XCTAssertEqual(mode, 0o600)
     }
+
+    func testPicksAreListedAndForgotten() {
+        let learning = Learning(url: nil)
+        let now = Date()
+        learning.record(command: "git", word: "checkout", now: now)
+        learning.record(command: "git", word: "switch", now: now)
+        learning.record(command: "git", word: "switch", now: now)
+        learning.record(command: "brew", word: "install", now: now)
+        XCTAssertEqual(learning.picks(now: now).map(\.word), ["switch", "install", "checkout"])
+        XCTAssertEqual(learning.picks(command: "git", now: now).map(\.word), ["switch", "checkout"])
+        XCTAssertEqual(learning.forget(command: "git", word: "switch"), 1)
+        XCTAssertEqual(learning.forget(command: "git", word: "nope"), 0)
+        XCTAssertEqual(learning.forget(command: "git"), 1)
+        XCTAssertEqual(learning.picks(now: now).map(\.command), ["brew"])
+    }
 }
 
 final class WireTests: XCTestCase {
@@ -136,6 +151,9 @@ final class WireTests: XCTestCase {
                        .update(EditorState(seq: 7, cwd: "/tmp", buffer: "git ch", row: 3, col: 9, cols: 120, lines: 40)))
         XCTAssertEqual(AppMessage.items(seq: 2, insertions: [Insertion(replace: 1, text: "a ")]).encoded,
                        "items\u{1F}2\u{1F}1\u{1F}a \n")
+        XCTAssertEqual(ShellMessage.parse("control\u{1F}learned\u{1F}git"), .control(["learned", "git"]))
+        XCTAssertEqual(AppMessage.reply(ok: false, lines: ["a", "b"]).encoded,
+                       "out\u{1F}a\nout\u{1F}b\nend\u{1F}1\n")
     }
 }
 

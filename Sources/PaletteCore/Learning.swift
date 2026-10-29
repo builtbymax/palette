@@ -54,6 +54,39 @@ public final class Learning {
 
     public var count: Int { entries.count }
 
+    public struct Pick: Equatable {
+        public var command: String
+        public var word: String
+        public var score: Double
+        public var last: Date
+    }
+
+    /// Learned picks, strongest first; only those of `command` when given.
+    public func picks(command: String? = nil, now: Date = Date()) -> [Pick] {
+        entries.compactMap { key, e in
+            let parts = key.split(separator: "\u{1F}", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2, command == nil || parts[0] == command! else { return nil }
+            return Pick(command: String(parts[0]), word: String(parts[1]),
+                        score: e.count * pow(0.5, now.timeIntervalSince(e.last) / halfLife), last: e.last)
+        }
+        .sorted { ($0.score, $1.command, $1.word) > ($1.score, $0.command, $0.word) }
+    }
+
+    /// Forgets `word` for `command`, or everything learned for `command`.
+    /// Returns how many picks were forgotten.
+    @discardableResult
+    public func forget(command: String, word: String? = nil) -> Int {
+        let before = entries.count
+        if let word {
+            entries.removeValue(forKey: Self.key(command, word))
+        } else {
+            entries = entries.filter { !$0.key.hasPrefix(command + "\u{1F}") }
+        }
+        let removed = before - entries.count
+        if removed > 0 { save() }
+        return removed
+    }
+
     /// Drops entries older than `retention`. Returns whether any were dropped.
     @discardableResult
     private func prune(now: Date) -> Bool {

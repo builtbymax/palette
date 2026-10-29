@@ -10,7 +10,8 @@
 #                        otherwise run the command as usual
 #   Esc                  close until the next word
 #
-# Everything else behaves exactly as without Palette.
+# Everything else behaves exactly as without Palette. `palette help` lists
+# the command-line tool; `palette unload` removes Palette from this shell.
 
 [[ -o interactive && -o zle ]] || return 0
 [[ -n $PALETTE_WORKER ]] && return 0
@@ -21,6 +22,7 @@ typeset -g _PALETTE_LOADED=1
 autoload -Uz add-zsh-hook add-zle-hook-widget
 
 typeset -g _pal_sock=${PALETTE_SOCKET:-$HOME/.local/state/palette/palette.sock}
+typeset -g _pal_script=${${(%):-%x}:A}
 typeset -gi _pal_fd=-1 _pal_seq=0 _pal_open=0 _pal_sel=1 _pal_moved=0 _pal_launched=0
 typeset -gi _pal_row0=-1 _pal_col0=0 _pal_locate=1 _pal_lastw=0
 typeset -gF _pal_seen=0
@@ -129,6 +131,10 @@ _pal_receive() {
       ;;
     closed)
       _pal_open=0
+      ;;
+    unload)
+      _pal_unload
+      zle -M "Palette is unloaded from this shell. Run \`palette load\` to load it again."
       ;;
     pick)
       if (( _pal_open && f[2] == _pal_seq )); then
@@ -281,6 +287,56 @@ _pal_clear_screen() {
   _pal_locate=1
 }
 zle -N clear-screen _pal_clear_screen
+
+# Removes Palette's key bindings and hooks and disconnects, for when it
+# misbehaves in this shell. The menu-bar item can ask for this too.
+_pal_unload() {
+  (( ${+_PALETTE_LOADED} )) || return 1
+  local key
+  for key in ${(k)_pal_orig}; do
+    # Leave keys alone that another plugin bound after Palette.
+    [[ ${${(z)$(bindkey -M main -- $key 2>/dev/null)}[2]} == _pal_key ]] || continue
+    if [[ -n $_pal_orig[$key] ]]; then
+      bindkey -M main -- $key $_pal_orig[$key]
+    else
+      bindkey -M main -r -- $key
+    fi
+  done
+  _pal_orig=()
+  zle -A .clear-screen clear-screen
+  add-zle-hook-widget -d line-init _pal_line_init
+  add-zle-hook-widget -d line-pre-redraw _pal_line_pre_redraw
+  add-zle-hook-widget -d line-finish _pal_line_finish
+  add-zsh-hook -d precmd _pal_precmd
+  add-zsh-hook -d zshexit _pal_exit
+  _pal_send hide
+  _pal_disconnect
+  _pal_exit
+  unset _PALETTE_LOADED
+}
+
+# The command-line tool. `unload` and `load` act on this shell; everything
+# else runs the Palette binary next to this script.
+palette() {
+  case $*:$# in
+    unload:1)
+      _pal_unload || { print -ru2 -- "palette: not loaded in this shell"; return 1; }
+      print -r -- "Palette is unloaded from this shell. Run \`palette load\` to load it again."
+      return 0
+      ;;
+    load:1)
+      (( ${+_PALETTE_LOADED} )) && { print -r -- "Palette is already loaded in this shell."; return 0; }
+      source $_pal_script && _pal_connect
+      return 0
+      ;;
+  esac
+  local bin
+  for bin in ${_pal_script:h:h}/{MacOS/Palette,.build/debug/Palette}; do
+    [[ -x $bin ]] && { PALETTE_SOCKET=$_pal_sock command $bin "$@"; return; }
+  done
+  print -ru2 -- "palette: can't find the Palette binary next to $_pal_script"
+  return 1
+}
 
 () {
   local key

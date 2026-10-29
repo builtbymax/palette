@@ -43,6 +43,10 @@ final class Session {
 
     private(set) var pid: Int32 = 0
     private(set) var tty = ""
+    /// Working directory of the last edit, empty until the first one.
+    private(set) var cwd = ""
+    /// Answers `palette` CLI commands; set by the hub.
+    var onControl: (([String]) -> AppMessage)?
     private var path = "/usr/bin:/bin:/usr/sbin:/sbin"
     private var snapshot = (path: "", signature: "")
     private var completer: Completer?
@@ -90,14 +94,28 @@ final class Session {
         case .hide:
             state = nil
             hide()
+        case let .control(args):
+            connection.send(onControl?(args) ?? .reply(ok: false, lines: ["not supported"]))
+            connection.close()
         }
     }
 
+    /// True for connected shells, false for `palette` CLI requests.
+    var isShell: Bool { pid != 0 }
+
     func disconnected() {
+        guard isShell else { return }
         presenter?.hide(owner: self)
         completer?.stop()
         if snapshot.path.hasSuffix("/shell-\(pid).zsh") { unlink(snapshot.path) }
         Log.write("shell \(pid) disconnected")
+    }
+
+    /// Asks the shell to remove Palette's key bindings and hooks and disconnect.
+    func unload() {
+        hide()
+        connection.send(.unload)
+        Log.write("asked shell \(pid) to unload")
     }
 
     /// The app hid the panel itself (focus change, click elsewhere).
@@ -119,6 +137,7 @@ final class Session {
 
     private func update(_ state: EditorState) {
         self.state = state
+        cwd = state.cwd
         guard let context = CompletionContext.parse(state.buffer),
               !(context.isCommandPosition && context.query.isEmpty) else {
             self.context = nil

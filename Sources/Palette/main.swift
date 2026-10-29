@@ -2,11 +2,17 @@ import AppKit
 
 let arguments = CommandLine.arguments.dropFirst()
 
+// `palette <command>`; flags (including ones macOS passes) start the app.
+if let first = arguments.first, !first.hasPrefix("-") {
+    exit(CLI.run(Array(arguments)))
+}
+
 if arguments.contains("--help") {
     print("""
     Palette — Fig-style autocomplete for zsh.
 
       Palette              run the menu-bar app
+      Palette <command>    see `Palette help` for the command-line tool
       Palette --headless   serve completions without UI and print panel events (testing)
       Palette --source     print the line to add to ~/.zshrc
       Palette --version    print the version

@@ -161,6 +161,36 @@ source {ROOT}/shell/palette.zsh
         shell.type("\x15", 0.3)
         shell.type("cd zzzz-not-there", 1.0)
         check("hides without matches", app.read()[-1] == "hide", app.events[-3:])
+
+        def cli(*args):
+            return subprocess.run([BINARY, *args], env=env, capture_output=True, text=True)
+
+        shells = cli("shells")
+        check("cli lists the shell", shells.returncode == 0 and str(shell.pid) in shells.stdout, shells.stdout)
+        learned = cli("learned", "git")
+        check("cli lists learned picks", "checkout" in learned.stdout, learned.stdout + learned.stderr)
+        check("cli forgets a pick", cli("forget", "git", "checkout").returncode == 0)
+        check("cli reports a missing pick", cli("forget", "git", "checkout").returncode == 1)
+        check("cli rejects unknown commands", cli("frobnicate").returncode == 1)
+
+        shell.type("\x15", 0.3)
+        unload = cli("unload", str(shell.pid))
+        shell.pump(1.0)
+        check("cli unloads a shell", unload.returncode == 0 and "No shells" in cli("shells").stdout,
+              unload.stdout + unload.stderr)
+        before = len(app.read())
+        shell.type("git ch", 1.0)
+        check("unloaded shell sends nothing", len(app.read()) == before, app.events[before:])
+        shell.type("\t", 0.5)
+        check("unloaded shell keeps its own tab", buffer().startswith("git ch"), repr(buffer()))
+
+        shell.type("\x15", 0.3)
+        shell.type("palette load\n", 1.5)
+        shell.type("git ch", 1.5)
+        check("palette load reconnects", "items=checkout" in app.last_show(), app.last_show())
+        shell.type("\x15", 0.3)
+        shell.type("palette unload\n", 1.0)
+        check("palette unload in the shell", "No shells" in cli("shells").stdout)
     finally:
         if shell:
             shell.close()

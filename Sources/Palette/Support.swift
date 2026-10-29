@@ -13,6 +13,11 @@ enum Paths {
     static let cache = home.appendingPathComponent("Library/Caches/Palette")
     static let log = home.appendingPathComponent("Library/Logs/Palette.log")
 
+    /// `path` with the home directory shown as `~`.
+    static func abbreviated(_ path: String) -> String {
+        path == home.path || path.hasPrefix(home.path + "/") ? "~" + path.dropFirst(home.path.count) : path
+    }
+
     /// Shell scripts ship in the app's Resources; debug builds fall back to
     /// the repository checkout.
     static func script(_ name: String) -> String {
