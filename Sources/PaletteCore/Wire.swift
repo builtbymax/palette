@@ -51,6 +51,8 @@ public enum ShellMessage: Equatable {
     case accept(String)
     case dismiss
     case hide
+    /// A `palette` CLI command; the app answers with `AppMessage.reply`.
+    case control([String])
 
     public static func parse(_ line: Substring) -> ShellMessage? {
         let f = Wire.fields(line)
@@ -74,6 +76,8 @@ public enum ShellMessage: Equatable {
             return .dismiss
         case ("hide", _):
             return .hide
+        case ("control", 2...):
+            return .control(Array(f.dropFirst()))
         default:
             return nil
         }
@@ -97,6 +101,10 @@ public enum AppMessage: Equatable {
     case pick(seq: Int, index: Int)
     /// The app hid the panel on its own (focus loss, click elsewhere).
     case closed
+    /// Remove Palette from the shell (the menu or `palette unload`).
+    case unload
+    /// The answer to a `control` message: output lines, then the exit status.
+    case reply(ok: Bool, lines: [String])
 
     public var encoded: String {
         switch self {
@@ -108,6 +116,10 @@ public enum AppMessage: Equatable {
             return Wire.line(["pick", String(seq), String(index)])
         case .closed:
             return Wire.line(["closed"])
+        case .unload:
+            return Wire.line(["unload"])
+        case let .reply(ok, lines):
+            return lines.map { Wire.line(["out", $0]) }.joined() + Wire.line(["end", ok ? "0" : "1"])
         }
     }
 }

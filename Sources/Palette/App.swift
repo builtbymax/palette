@@ -22,6 +22,7 @@ final class Hub {
         server.onConnect = { [weak self, weak presenter] connection in
             guard let self, let presenter else { return }
             let session = Session(connection: connection, presenter: presenter, learning: self.learning)
+            session.onControl = { [weak self] in self?.control($0) ?? .reply(ok: false, lines: ["Palette is quitting"]) }
             let id = ObjectIdentifier(session)
             self.sessions[id] = session
             connection.onMessage = { [weak session] in session?.handle($0) }
@@ -37,6 +38,9 @@ final class Hub {
     }
 
     func stop() { server.stop() }
+
+    /// Connected shells, oldest process first; excludes `palette` CLI requests.
+    var shells: [Session] { sessions.values.filter(\.isShell).sorted { $0.pid < $1.pid } }
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
@@ -76,7 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.removeAllItems()
         let trusted = AXIsProcessTrusted()
         let installed = ShellIntegration.isInstalled
-        menu.addItem(StatusMenu.header(version: Bundle.main.shortVersion, shells: hub.sessions.count,
+        menu.addItem(StatusMenu.header(version: Bundle.main.shortVersion, shells: hub.shells.count,
                                        ready: trusted && installed))
         menu.addItem(.separator())
 
@@ -119,6 +123,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let debug = action("Debug Logging", symbol: "ladybug") { Log.verbose.toggle() }
         debug.state = Log.verbose ? .on : .off
         more.addItem(debug)
+        more.addItem(unloadItem())
         more.addItem(.separator())
         more.addItem(action("Forget Learned Suggestions (\(hub.learning.count))", symbol: "arrow.counterclockwise") {
             [hub] in hub.learning.clear()
@@ -139,6 +144,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.addItem(.separator())
         }
         menu.addItem(action("Quit Palette") { NSApp.terminate(nil) }.with(key: "q"))
+    }
+
+    /// Removes Palette from a shell whose prompt or keys misbehave, without
+    /// restarting it. Re-sourcing `~/.zshrc` or a new shell brings it back.
+    private func unloadItem() -> NSMenuItem {
+        let shells = hub.shells
+        let item = NSMenuItem(title: "Unload From Shell", action: nil, keyEquivalent: "")
+        item.image = StatusMenu.symbol("eject")
+        guard !shells.isEmpty else {
+            item.isEnabled = false
+            return item
+        }
+        let submenu = NSMenu()
+        for shell in shells {
+            let place = shell.cwd.isEmpty ? "" : " — \(Paths.abbreviated(shell.cwd))"
+            let title = "\((shell.tty as NSString).lastPathComponent)\(place)"
+            let entry = action(title) { shell.unload() }
+            entry.toolTip = "zsh, pid \(shell.pid)"
+            submenu.addItem(entry)
+        }
+        if shells.count > 1 {
+            submenu.addItem(.separator())
+            submenu.addItem(action("All Shells") { shells.forEach { $0.unload() } })
+        }
+        item.submenu = submenu
+        return item
     }
 
     private func action(_ title: String, symbol: String? = nil, _ handler: @escaping () -> Void) -> ClosureMenuItem {

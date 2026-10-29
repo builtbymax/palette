@@ -48,6 +48,30 @@ When the dropdown is closed, every key does what it did before. Source
 Palette **last** in `~/.zshrc` so its key bindings wrap those of other
 plugins.
 
+## Command line
+
+The shell plugin adds a `palette` command:
+
+| Command | Does |
+| --- | --- |
+| `palette status` | Shows whether Palette is running, connected shells and setup |
+| `palette version` | Prints the version |
+| `palette open` | Starts Palette |
+| `palette update` | Checks for updates and installs them |
+| `palette learned [command]` | Lists learned suggestions, strongest first |
+| `palette forget <command> [word]` | Forgets one learned suggestion, or all for a command |
+| `palette forget --all` | Forgets every learned suggestion |
+| `palette shells` | Lists connected shells |
+| `palette unload` | Removes Palette's key bindings and hooks from this shell |
+| `palette unload <pid>` or `--all` | Does the same for another shell, or for all |
+| `palette load` | Loads Palette into this shell again |
+| `palette debug [on\|off]` | Shows or sets debug logging |
+| `palette log [-f]` | Prints the log, or follows it |
+
+If Palette misbehaves in one shell, **Troubleshooting → Unload From Shell**
+in the menu does the same as `palette unload`. The shell keeps running
+without Palette until you run `palette load` or open a new shell.
+
 ## How it works
 
 ```
