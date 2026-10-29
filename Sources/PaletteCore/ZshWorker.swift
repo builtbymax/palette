@@ -106,6 +106,8 @@ public final class ZshWorker {
             "PALETTE_REQ=\(requestPath)",
         ]
         if let tmp = ProcessInfo.processInfo.environment["TMPDIR"] { env.append("TMPDIR=\(tmp)") }
+        // Completions that ask Palette (the `palette` command's) reach this instance.
+        if let socket = ProcessInfo.processInfo.environment["PALETTE_SOCKET"] { env.append("PALETTE_SOCKET=\(socket)") }
 
         let argv = ["zsh", "-f", "-i"]
         var cArgv = argv.map { strdup($0) } + [nil]

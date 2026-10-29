@@ -50,6 +50,14 @@ _pw_load() {
   for f in $_pal_stubs; do
     (( $+functions[$f] )) || functions[$f]=':'
   done
+  # compinit -C keeps the cached dump, which misses completion functions added
+  # to fpath since (like Palette's own); autoload those the snapshot names.
+  local -a found
+  for f in ${(u)${(v)_comps}}; do
+    (( $+functions[$f] )) && continue
+    found=( ${^fpath}/$f(N) )
+    (( $#found )) && autoload -Uz $f
+  done
   _pw_styles
 }
 

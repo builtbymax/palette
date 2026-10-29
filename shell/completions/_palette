@@ -1,0 +1,62 @@
+#compdef palette
+# Completion for the `palette` command line tool. Learned commands and shell
+# pids come from the running app.
+
+local bin
+for bin in ${functions_source[_palette]:h:h:h}/{MacOS/Palette,.build/debug/Palette}; do
+  [[ -x $bin ]] && break
+  bin=''
+done
+
+local -a commands=(
+  'status:show whether Palette is running and set up'
+  'version:print the version'
+  'open:start Palette'
+  'update:check for updates and install them'
+  'learned:list learned suggestions'
+  'forget:forget learned suggestions'
+  'shells:list connected shells'
+  'unload:remove Palette from a shell'
+  'load:load Palette into this shell again'
+  'debug:show or set debug logging'
+  'log:print or follow the log'
+  'help:show usage'
+)
+
+if (( CURRENT == 2 )); then
+  _describe -t commands 'palette command' commands
+  return
+fi
+
+local -a lines items
+case $words[2] in
+  learned|forget)
+    [[ -n $bin ]] && lines=( ${(f)"$($bin learned --tsv 2>/dev/null)"} )
+    if (( CURRENT == 3 )); then
+      items=( ${(u)lines%%$'\t'*} )
+      local -a all=( '--all:forget every learned suggestion' )
+      [[ $words[2] == forget ]] && _describe -t options option all
+      _wanted commands expl 'learned command' compadd -a items
+    elif (( CURRENT == 4 )) && [[ $words[2] == forget && $words[3] != --all ]]; then
+      items=( ${${(M)lines:#${(b)words[3]}$'\t'*}#*$'\t'} )
+      _wanted words expl 'learned word' compadd -a items
+    fi
+    ;;
+  unload)
+    if (( CURRENT == 3 )); then
+      [[ -n $bin ]] && lines=( ${(f)"$($bin shells --tsv 2>/dev/null)"} )
+      items=( ${${lines/$'\t'/:}//$'\t'/ } )
+      local -a all=( '--all:unload from every shell' )
+      _describe -t options option all
+      _describe -t shells 'shell pid' items
+    fi
+    ;;
+  debug)
+    items=( 'on:turn debug logging on' 'off:turn debug logging off' )
+    (( CURRENT == 3 )) && _describe -t states state items
+    ;;
+  log)
+    items=( '-f:follow the log' )
+    (( CURRENT == 3 )) && _describe -t options option items
+    ;;
+esac

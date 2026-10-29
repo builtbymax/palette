@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - name: Shell syntax
-        run: zsh -n shell/palette.zsh shell/worker.zsh scripts/*.sh
+        run: zsh -n shell/palette.zsh shell/worker.zsh shell/completions/_palette scripts/*.sh
       - name: Unit tests
         run: swift test
       - name: End-to-end test

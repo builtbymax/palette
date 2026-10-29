@@ -162,6 +162,21 @@ source {ROOT}/shell/palette.zsh
         shell.type("cd zzzz-not-there", 1.0)
         check("hides without matches", app.read()[-1] == "hide", app.events[-3:])
 
+        shell.type("\x15", 0.3)
+        shell.type("palette st", 1.5)
+        check("completes palette commands", "items=status" in app.last_show(), app.last_show())
+        shell.type("\x15", 0.3)
+        shell.type("palette debug ", 1.5)
+        check("completes palette arguments", "items=off,on" in app.last_show() or "items=on,off" in app.last_show(),
+              app.last_show())
+        shell.type("\x15", 0.3)
+        shell.type("palette unload ", 1.5)
+        check("completes connected shell pids", str(shell.pid) in app.last_show(), app.last_show())
+        shell.type("\x15", 0.3)
+        shell.type("palette forget git ", 1.5)
+        check("completes learned words", "items=checkout" in app.last_show(), app.last_show())
+        shell.type("\x15", 0.3)
+
         def cli(*args):
             return subprocess.run([BINARY, *args], env=env, capture_output=True, text=True)
 

@@ -27,6 +27,7 @@ cp "$BIN_DIR/Palette" $APP/Contents/MacOS/Palette
 # Drop debug and local symbols: they hold the build machine's source and object paths.
 strip -S -x $APP/Contents/MacOS/Palette
 cp shell/palette.zsh shell/worker.zsh assets/Mark.svg LICENSE $APP/Contents/Resources/
+cp -R shell/completions $APP/Contents/Resources/
 
 # Notices for everything bundled besides Palette: Sparkle's license, which lists its own dependencies.
 SPARKLE_LICENSE=.build/artifacts/sparkle/Sparkle/LICENSE
