@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The jobs only read the repository.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The end-to-end test completes branch names.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Shell syntax
+        run: zsh -n shell/palette.zsh shell/worker.zsh scripts/*.sh
+      - name: Unit tests
+        run: swift test
+      - name: End-to-end test
+        run: |
+          swift build
+          python3 Tests/e2e.py
+      - name: App bundle
+        env:
+          PALETTE_SIGN_IDENTITY: "-"
+        run: scripts/build.sh
