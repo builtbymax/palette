@@ -50,7 +50,8 @@ plugins.
 
 ## Command line
 
-The shell plugin adds a `palette` command:
+The shell plugin adds a `palette` command, with completion for its commands,
+learned suggestions and connected shells (in the dropdown and on Tab):
 
 | Command | Does |
 | --- | --- |
@@ -59,7 +60,7 @@ The shell plugin adds a `palette` command:
 | `palette open` | Starts Palette |
 | `palette update` | Checks for updates and installs them |
 | `palette learned [command]` | Lists learned suggestions, strongest first |
-| `palette forget <command> [word]` | Forgets one learned suggestion, or all for a command |
+| `palette forget <command> [word]` | Forgets one learned suggestion, or all for a command (`-` for picked command names) |
 | `palette forget --all` | Forgets every learned suggestion |
 | `palette shells` | Lists connected shells |
 | `palette unload` | Removes Palette's key bindings and hooks from this shell |

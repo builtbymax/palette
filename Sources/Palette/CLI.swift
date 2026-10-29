@@ -17,6 +17,7 @@ enum CLI {
       learned [command]      list learned suggestions, strongest first
       forget <command> [word]
                              forget a learned suggestion, or all for a command
+                             (`-` is the command for picked command names)
       forget --all           forget every learned suggestion
 
       shells                 list connected shells
@@ -140,10 +141,17 @@ extension Hub {
             DispatchQueue.main.async { updater.checkForUpdates() }
             return .reply(ok: true, lines: ["Checking for updates. Palette shows the result in a window."])
         case "learned":
-            return learned(command: args.first)
+            // --tsv is for the zsh completion: "command<TAB>word" lines.
+            if args.first == "--tsv" {
+                return .reply(ok: true, lines: learning.picks().map { "\(Self.shown($0.command))\t\($0.word)" })
+            }
+            return learned(command: args.first.map(Self.parsed))
         case "forget":
             return forget(args)
         case "shells":
+            if args.first == "--tsv" {
+                return .reply(ok: true, lines: shells.map { "\($0.pid)\t\(($0.tty as NSString).lastPathComponent)\t\(Paths.abbreviated($0.cwd))" })
+            }
             return listShells()
         case "unload":
             return unload(args)
@@ -181,7 +189,7 @@ extension Hub {
         }
         let date = DateFormatter()
         date.dateFormat = "yyyy-MM-dd"
-        let rows = picks.map { [$0.command, $0.word, String(format: "%.1f", $0.score), date.string(from: $0.last)] }
+        let rows = picks.map { [Self.shown($0.command), $0.word, String(format: "%.1f", $0.score), date.string(from: $0.last)] }
         return .reply(ok: true, lines: table(header: ["COMMAND", "WORD", "SCORE", "LAST PICKED"], rows: rows))
     }
 
@@ -192,7 +200,7 @@ extension Hub {
             learning.clear()
             return .reply(ok: true, lines: ["Forgot \(count) learned suggestion\(count == 1 ? "" : "s")."])
         case 1, 2:
-            let removed = learning.forget(command: args[0], word: args.count == 2 ? args[1] : nil)
+            let removed = learning.forget(command: Self.parsed(args[0]), word: args.count == 2 ? args[1] : nil)
             guard removed > 0 else { return .reply(ok: false, lines: ["nothing learned for \(args.joined(separator: " "))"]) }
             return .reply(ok: true, lines: ["Forgot \(removed) learned suggestion\(removed == 1 ? "" : "s")."])
         default:
@@ -221,6 +229,11 @@ extension Hub {
         return .reply(ok: true, lines: ["Unloading Palette from \(targets.count) shell\(targets.count == 1 ? "" : "s"). " +
                                         "A shell running a command unloads at its next prompt."])
     }
+
+    /// Picks of command names (at the start of a line) have no command; the
+    /// CLI shows and accepts `-` for them.
+    private static func shown(_ command: String) -> String { command.isEmpty ? "-" : command }
+    private static func parsed(_ command: String) -> String { command == "-" ? "" : command }
 
     private func table(header: [String], rows: [[String]]) -> [String] {
         let all = [header] + rows

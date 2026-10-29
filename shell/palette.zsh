@@ -338,6 +338,11 @@ palette() {
   return 1
 }
 
+# Completion for `palette`, for Tab and for Palette's own dropdown.
+fpath+=( ${_pal_script:h}/completions )
+autoload -Uz _palette
+(( ${+functions[compdef]} )) && compdef _palette palette
+
 () {
   local key
   for key in $'\e[A' $'\eOA' $'\e[B' $'\eOB' $'\C-p' $'\C-n' $'\t' $'\r' $'\e'; do
