@@ -1,8 +1,28 @@
+<div align="center">
+
+<img src="assets/AppIcon.png" width="128" height="128" alt="Palette icon">
+
 # Palette
 
 Fig-style autocomplete for zsh on macOS. A native dropdown appears at your
 cursor as you type, with fuzzy matching, descriptions and icons. It works in
 Ghostty and Rex.
+
+[![Latest release](https://img.shields.io/github/v/release/builtbymax/palette?style=flat-square&label=release)](https://github.com/builtbymax/palette/releases/latest)
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?style=flat-square&logo=apple)](#install)
+[![zsh](https://img.shields.io/badge/shell-zsh-000?style=flat-square)](#limits)
+[![License: MIT](https://img.shields.io/github/license/builtbymax/palette?style=flat-square)](LICENSE)
+
+[**Download**](https://github.com/builtbymax/palette/releases/latest) · [Releases](https://github.com/builtbymax/palette/releases) · [Issues](https://github.com/builtbymax/palette/issues)
+
+<img src="assets/screenshot.png" alt="Palette's dropdown completing git subcommands" width="640">
+
+</div>
+
+> [!NOTE]
+> Palette is a side project I built with [Claude](https://claude.ai) for myself. It's open source
+> for anyone who wants to use it or look at how it works. Releases are signed, notarized by Apple
+> and updated regularly.
 
 Palette doesn't ship completion specs. It asks **zsh's own completion
 system** for candidates, so everything your shell can complete is available:
@@ -12,27 +32,19 @@ results, learns what you pick and shows them.
 
 ## Install
 
-Download `Palette-x.y.z.zip` from the latest release, or build it:
-
-```sh
-make install
-```
-
-This builds `Palette.app`, signs it with your Developer ID (or Apple
-Development) identity, copies it to `/Applications` and opens it. On first
-launch:
-
-1. **Grant Accessibility access** when macOS asks. Palette uses it only to
-   read the frame of the focused terminal pane. A stable signing identity
-   keeps the grant across rebuilds.
-2. **Install shell integration** when Palette offers it. This adds one
+1. Download `Palette-x.y.z.zip` from the [latest release](https://github.com/builtbymax/palette/releases/latest).
+2. Unzip it, move `Palette.app` to `/Applications` and open it.
+3. **Grant Accessibility access** when macOS asks. Palette uses it only to
+   read the frame of the focused terminal pane.
+4. **Install shell integration** when Palette offers it. This adds one
    `source` line at the end of `~/.zshrc`. The menu-bar item has the same
    option and can copy the line instead.
 
 Open a new terminal tab and type `git `.
 
-The shell plugin starts Palette in the background if it isn't running.
-**Open at Login** is in the menu-bar menu.
+Requires macOS 14 or later. The shell plugin starts Palette in the
+background if it isn't running. **Open at Login** is in the menu-bar menu.
+Palette updates itself, and the shell plugin with it.
 
 ## Keys
 
@@ -147,7 +159,19 @@ the next launch.
    tccutil reset Accessibility dev.builtbymax.palette
    ```
 
-## Develop
+## Build it yourself
+
+Requires macOS 14+ and Xcode or the Swift toolchain.
+
+```sh
+make install
+```
+
+This builds `Palette.app`, signs it with your Developer ID (or Apple
+Development) identity, copies it to `/Applications` and opens it. A stable
+signing identity keeps the Accessibility grant across rebuilds.
+
+### Develop
 
 ```sh
 swift test                      # unit tests, including a live zsh worker test
@@ -160,7 +184,7 @@ PALETTE_DEBUG=1 swift run Palette                       # run from source
 which `Tests/e2e.py` uses. Set `PALETTE_SOCKET` to run it beside an installed
 copy.
 
-## Versions and releases
+### Versions and releases
 
 `VERSION` holds the version. Releases are signed with a Developer ID,
 notarized and published on GitHub Releases. Installed copies update
@@ -195,3 +219,7 @@ Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 - Multi-line buffers and words inside quotes aren't completed.
 - Placement assumes one cell per character in the buffer. Wide characters
   before the cursor can shift the dropdown by a few cells.
+
+## License
+
+[MIT](LICENSE)
