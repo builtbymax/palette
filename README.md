@@ -68,6 +68,7 @@ learned suggestions and connected shells (in the dropdown and on Tab):
 | `palette load` | Loads Palette into this shell again |
 | `palette debug [on\|off]` | Shows or sets debug logging |
 | `palette log [-f]` | Prints the log, or follows it |
+| `palette uninstall [--yes]` | Removes Palette completely (see [Uninstall](#uninstall)) |
 
 If Palette misbehaves in one shell, **Troubleshooting → Unload From Shell**
 in the menu does the same as `palette unload`. The shell keeps running
@@ -133,19 +134,26 @@ the next launch.
 
 ## Uninstall
 
-1. Quit Palette from the menu-bar menu, and turn off **Open at Login** first
-   if you turned it on.
-2. Delete the block between `# >>> palette >>>` and `# <<< palette <<<` from
-   `~/.zshrc`.
-3. Delete `/Applications/Palette.app`.
-4. Delete local data and reset the Accessibility permission:
+```sh
+palette uninstall
+```
 
-   ```sh
-   rm -rf ~/.local/state/palette ~/Library/Application\ Support/Palette \
-     ~/Library/Caches/Palette ~/Library/Logs/Palette.log*
-   defaults delete dev.builtbymax.palette
-   tccutil reset Accessibility dev.builtbymax.palette
-   ```
+This lists what it removes and asks first (`--yes` skips the question). It
+quits Palette, unloads it from open shells, turns off **Open at Login**,
+deletes the `# >>> palette >>>` block from `~/.zshrc`, deletes the data
+listed above and Palette's settings, resets its Accessibility permission and
+moves `Palette.app` to the Trash.
+
+To do it by hand: quit Palette, turn off **Open at Login**, delete the block
+from `~/.zshrc`, delete `Palette.app`, then run
+
+```sh
+rm -rf ~/.local/state/palette ~/Library/Application\ Support/Palette \
+  ~/Library/Caches/Palette ~/Library/Caches/dev.builtbymax.palette \
+  ~/Library/HTTPStorages/dev.builtbymax.palette* ~/Library/Logs/Palette.log*
+defaults delete dev.builtbymax.palette
+tccutil reset Accessibility dev.builtbymax.palette
+```
 
 ## Develop
 

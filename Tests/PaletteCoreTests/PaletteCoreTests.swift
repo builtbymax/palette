@@ -157,6 +157,24 @@ final class WireTests: XCTestCase {
     }
 }
 
+final class ZshrcTests: XCTestCase {
+    let script = "/Applications/Palette.app/Contents/Resources/palette.zsh"
+
+    func testRemovesInstalledBlock() {
+        let text = "export A=1\n\n# >>> palette >>>\n# Keep this last.\nsource \"\(script)\"\n# <<< palette <<<\n"
+        XCTAssertEqual(Zshrc.removingPalette(from: text, script: script), "export A=1\n")
+    }
+
+    func testRemovesCopiedSourceLines() {
+        let text = "source ~/x.zsh\nsource '/Users/me/Apps/Palette.app/Contents/Resources/palette.zsh'\nalias g=git\n"
+        XCTAssertEqual(Zshrc.removingPalette(from: text, script: script), "source ~/x.zsh\nalias g=git\n")
+    }
+
+    func testLeavesOtherFilesAlone() {
+        XCTAssertNil(Zshrc.removingPalette(from: "source ~/palette.zsh\n# >>> palette >>>\n", script: script))
+    }
+}
+
 final class WorkerTests: XCTestCase {
     static let script = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

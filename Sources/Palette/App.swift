@@ -196,8 +196,8 @@ final class HeadlessPresenter: Presenter {
 }
 
 enum ShellIntegration {
-    static let begin = "# >>> palette >>>"
-    static let end = "# <<< palette <<<"
+    static let begin = Zshrc.begin
+    static let end = Zshrc.end
     static var zshrc: URL {
         let dir = ProcessInfo.processInfo.environment["ZDOTDIR"].map { URL(fileURLWithPath: $0) } ?? Paths.home
         return dir.appendingPathComponent(".zshrc")
