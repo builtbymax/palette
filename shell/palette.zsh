@@ -316,7 +316,8 @@ _pal_unload() {
 }
 
 # The command-line tool. `unload` and `load` act on this shell; everything
-# else runs the Palette binary next to this script.
+# else runs the Palette binary next to this script. `uninstall` also unloads
+# this shell and removes this function.
 palette() {
   case $*:$# in
     unload:1)
@@ -332,7 +333,15 @@ palette() {
   esac
   local bin
   for bin in ${_pal_script:h:h}/{MacOS/Palette,.build/debug/Palette}; do
-    [[ -x $bin ]] && { PALETTE_SOCKET=$_pal_sock command $bin "$@"; return; }
+    [[ -x $bin ]] || continue
+    PALETTE_SOCKET=$_pal_sock command $bin "$@" || return
+    # The app is gone: take the rest of Palette out of this shell too.
+    if [[ $1 == uninstall ]]; then
+      _pal_unload
+      (( ${+functions[compdef]} )) && compdef -d palette
+      unfunction palette _palette 2>/dev/null
+    fi
+    return 0
   done
   print -ru2 -- "palette: can't find the Palette binary next to $_pal_script"
   return 1
