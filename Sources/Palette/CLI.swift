@@ -131,7 +131,8 @@ enum CLI {
         return fail("could not run \(tool)")
     }
 
-    private static let bundleID = "dev.builtbymax.palette"
+    /// The running copy's ID, so a test build with its own ID only removes itself.
+    private static let bundleID = Bundle.main.bundleIdentifier ?? "dev.builtbymax.palette"
 
     /// Removes everything Palette installed or wrote: the app, the line in
     /// ~/.zshrc, the login item, data, settings and the Accessibility grant.
@@ -195,16 +196,14 @@ enum CLI {
         for url in data {
             step("delete \(url.path)") { try fm.removeItem(at: url) }
         }
-        UserDefaults.standard.removePersistentDomain(forName: bundleID)
-        let tccutil = Process()
-        tccutil.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
-        tccutil.arguments = ["reset", "Accessibility", bundleID]
-        tccutil.standardOutput = FileHandle.nullDevice
-        tccutil.standardError = FileHandle.nullDevice
-        step("reset the Accessibility permission") {
-            try tccutil.run()
-            tccutil.waitUntilExit()
+        // Not through UserDefaults: this process shares the domain and would
+        // write an empty file back when it exits. `defaults delete` leaves one
+        // too, in the account's home whatever $HOME says.
+        try? quietly("/usr/bin/defaults", ["delete", bundleID])
+        if let home = NSHomeDirectoryForUser(NSUserName()) {
+            try? fm.removeItem(atPath: "\(home)/Library/Preferences/\(bundleID).plist")
         }
+        step("reset the Accessibility permission") { try quietly("/usr/bin/tccutil", ["reset", "Accessibility", bundleID]) }
         if let app {
             step("move \(app.path) to the Trash") { try fm.trashItem(at: app, resultingItemURL: nil) }
         }
@@ -212,6 +211,17 @@ enum CLI {
         guard !failed else { return fail("uninstall incomplete; see the errors above") }
         print("Palette is uninstalled. Open shells keep running without it.")
         return 0
+    }
+
+    /// Runs `tool` without output and waits for it.
+    private static func quietly(_ tool: String, _ arguments: [String]) throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: tool)
+        process.arguments = arguments
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        process.waitUntilExit()
     }
 
     /// Quits the running app, and kills it if it doesn't quit within 5 seconds.
