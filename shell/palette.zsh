@@ -26,7 +26,7 @@ typeset -g _pal_script=${${(%):-%x}:A}
 typeset -gi _pal_fd=-1 _pal_seq=0 _pal_open=0 _pal_sel=1 _pal_moved=0 _pal_launched=0
 typeset -gi _pal_row0=-1 _pal_col0=0 _pal_locate=1 _pal_lastw=0
 typeset -gF _pal_seen=0
-typeset -g _pal_last='' _pal_path='' _pal_dims='' _pal_snap_sig=''
+typeset -g _pal_last='' _pal_widget='' _pal_path='' _pal_dims='' _pal_snap_sig=''
 typeset -ga _pal_items        # replace count, text, replace count, text, …
 typeset -gA _pal_orig         # key sequence -> widget it replaced
 
@@ -183,7 +183,11 @@ _pal_update() {
   # remembered cell may be stale: measure again.
   (( ${EPOCHREALTIME:-0} - _pal_seen > 1 )) && _pal_locate=1
   _pal_seen=${EPOCHREALTIME:-0}
-  if [[ -z $BUFFER || $LBUFFER == *$'\n'* || $LASTWIDGET == *(history|search)* ]] || (( REGION_ACTIVE )); then
+  # Stay out of the way while walking history: replies from the app run a
+  # widget, which would reset prefix searches like up-line-or-beginning-search.
+  local last=$LASTWIDGET
+  [[ $last == _pal_key ]] && last=$_pal_widget
+  if [[ -z $BUFFER || $LBUFFER == *$'\n'* || $last == *(history|search)* ]] || (( REGION_ACTIVE )); then
     _pal_lastw=$w
     _pal_send hide
     return 0
@@ -223,6 +227,7 @@ _pal_move() {
 # Bound to the navigation keys; falls through to the original widget whenever
 # the dropdown is closed.
 _pal_key() {
+  _pal_widget=''
   if (( _pal_open )); then
     case $KEYS in
       $'\e[A'|$'\eOA'|$'\C-p') _pal_move -1; return 0 ;;
@@ -235,6 +240,7 @@ _pal_key() {
     _pal_send hide
   fi
   local orig=$_pal_orig[$KEYS]
+  _pal_widget=$orig
   [[ -n $orig ]] && zle $orig -- "$@"
   return 0
 }
