@@ -97,6 +97,9 @@ compdef _mytool mytool
 _t() {{ print -rn -- "$BUFFER" > {dump}; }}
 zle -N _t
 bindkey '^T' _t
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search; zle -N down-line-or-beginning-search
+bindkey '^[[A' up-line-or-beginning-search; bindkey '^[[B' down-line-or-beginning-search
 source {ROOT}/shell/palette.zsh
 """)
     env["ZDOTDIR"] = tmp
@@ -158,6 +161,23 @@ source {ROOT}/shell/palette.zsh
         shell.type("\x15", 0.3)
         shell.type("echo hi", 0.6)
         shell.type("\x1b[A", 0.4)  # dropdown closed or not, up must not break
+        shell.type("\x15", 0.3)
+
+        # A recalled line doesn't open the dropdown, and Palette's replies don't
+        # break prefix history search, so ↑/↓ keep walking history.
+        shell.type("git ch\n", 0.5)
+        shell.type("git sta\n", 0.5)
+        shell.type("\x1b[A", 1.5)
+        check("history recall keeps the dropdown closed", app.read()[-1] == "hide", app.events[-3:])
+        shell.type("\x1b[A", 0.5)
+        check("up walks history", buffer() == "git ch", repr(buffer()))
+        shell.type("\x15", 0.3)
+        shell.type("\x1b[A", 0.5)
+        shell.type("\x1b[A", 0.5)
+        shell.type("\x1b[B", 0.5)
+        check("down walks history", buffer() == "git sta", repr(buffer()))
+        shell.type("\x08", 1.5)
+        check("typing after recall suggests again", "status" in app.last_show(), app.last_show())
         shell.type("\x15", 0.3)
         shell.type("cd zzzz-not-there", 1.0)
         check("hides without matches", app.read()[-1] == "hide", app.events[-3:])
